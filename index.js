@@ -157,7 +157,7 @@ async function updateGist(data) {
     }
   }
   lines.push(
-    `📆 ${formatDistance(monthDistance).padStart(10)} ${(monthAchievements
+    `🗓 ${formatDistance(monthDistance).padStart(10)} ${(monthAchievements
       ? `${monthAchievements} achievement${monthAchievements > 1 ? "s" : ""}`
       : ""
     ).padStart(19)} ${`${(monthTime / 3600).toFixed(0)}`.padStart(3)}:${(
@@ -172,7 +172,7 @@ async function updateGist(data) {
       gist_id: gistId,
       files: {
         [filename]: {
-          filename: `YTD Strava Metrics`,
+          filename: `year-to-date workouts`,
           content: lines.join("\n")
         }
       }
