@@ -89,13 +89,16 @@ async function updateGist(data) {
   // Used to index the API response
   const keyMappings = {
     Running: {
-      key: "ytd_run_totals"
+      key: "ytd_run_totals",
+      symbol: "🏃‍♂️"
     },
     Swimming: {
-      key: "ytd_swim_totals"
+      key: "ytd_swim_totals",
+      symbol: "🏊‍♂️"
     },
     Cycling: {
-      key: "ytd_ride_totals"
+      key: "ytd_ride_totals",
+      symbol: "🚴‍♂️"
     }
   };
 
@@ -104,19 +107,19 @@ async function updateGist(data) {
   let lines = Object.keys(keyMappings)
     .map(activityType => {
       // Store the activity name and distance
-      const { key } = keyMappings[activityType];
+      const { key, symbol } = keyMappings[activityType];
       try {
         const { distance, moving_time } = data[key];
         totalDistance += distance;
         return {
-          name: activityType,
+          name: symbol,
           pace: (distance * 3600) / (moving_time ? moving_time : 1),
           distance
         };
       } catch (error) {
         console.error(`Unable to get distance\n${error}`);
         return {
-          name: activityType,
+          name: symbol,
           pace: 0,
           distance: 0
         };
@@ -137,8 +140,8 @@ async function updateGist(data) {
     .map(activity => {
       // Format the data to be displayed in the Gist
       const { name, distance, pace, barChart } = activity;
-      return `${name.padEnd(10)} ${distance.padStart(
-        13
+      return `${name.padEnd(1)} ${distance.padStart(
+        10
       )} ${barChart} ${pace.padStart(7)}`;
     });
 
@@ -154,9 +157,7 @@ async function updateGist(data) {
     }
   }
   lines.push(
-    `Last month ${formatDistance(monthDistance).padStart(
-      13
-    )} ${(monthAchievements
+    `📆 ${formatDistance(monthDistance).padStart(10)} ${(monthAchievements
       ? `${monthAchievements} achievement${monthAchievements > 1 ? "s" : ""}`
       : ""
     ).padStart(19)} ${`${(monthTime / 3600).toFixed(0)}`.padStart(3)}:${(
