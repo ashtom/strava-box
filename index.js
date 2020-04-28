@@ -6,7 +6,7 @@ const fs = require("fs");
 const {
   GIST_ID: gistId,
   GITHUB_TOKEN: githubToken,
-  STRAVA_ATHLETE_ID: stravaAtheleteId,
+  STRAVA_ATHLETE_ID: stravaAthleteId,
   STRAVA_ACCESS_TOKEN: stravaAccessToken,
   STRAVA_REFRESH_TOKEN: stravaRefreshToken,
   STRAVA_CLIENT_ID: stravaClientId,
@@ -28,7 +28,7 @@ async function main() {
 /**
  * Updates cached strava authentication tokens if necessary
  */
-async function getStravaToken(){
+async function getStravaToken() {
   // default env vars
   let cache = {
     // stravaAccessToken: stravaAccessToken,
@@ -44,25 +44,23 @@ async function getStravaToken(){
   } catch (error) {
     console.log(error);
   }
-  console.debug(`ref: ${cache.stravaRefreshToken.substring(0,6)}`);
+  console.debug(`ref: ${cache.stravaRefreshToken.substring(0, 6)}`);
 
   // get new tokens
   const data = await fetch("https://www.strava.com/oauth/token", {
-    method: 'post',
+    method: "post",
     body: JSON.stringify({
-      grant_type: 'refresh_token',
+      grant_type: "refresh_token",
       client_id: stravaClientId,
       client_secret: stravaClientSecret,
       refresh_token: cache.stravaRefreshToken
     }),
-    headers: {'Content-Type': 'application/json'},
-  }).then(
-    data => data.json()
-  );
+    headers: { "Content-Type": "application/json" }
+  }).then(data => data.json());
   cache.stravaAccessToken = data.access_token;
   cache.stravaRefreshToken = data.refresh_token;
-  console.debug(`acc: ${cache.stravaAccessToken.substring(0,6)}`);
-  console.debug(`ref: ${cache.stravaRefreshToken.substring(0,6)}`);
+  console.debug(`acc: ${cache.stravaAccessToken.substring(0, 6)}`);
+  console.debug(`ref: ${cache.stravaRefreshToken.substring(0, 6)}`);
 
   // save to disk
   fs.writeFileSync(AUTH_CACHE_FILE, JSON.stringify(cache));
@@ -75,7 +73,7 @@ async function getStravaToken(){
  * The distance returned by the API is in meters
  */
 async function getStravaStats() {
-  const API = `${API_BASE}${stravaAtheleteId}/stats?access_token=${await getStravaToken()}`;
+  const API = `${API_BASE}${stravaAthleteId}/stats?access_token=${await getStravaToken()}`;
 
   const json = await fetch(API).then(data => data.json());
   return json;
@@ -105,69 +103,67 @@ async function updateGist(data) {
 
   let totalDistance = 0;
 
-  let lines = Object.keys(keyMappings).map(activityType => {
-    // Store the activity name and distance
-    const { key } = keyMappings[activityType];
-    try {
-      const { distance, moving_time } = data[key];
-      totalDistance += distance;
+  let lines = Object.keys(keyMappings)
+    .map(activityType => {
+      // Store the activity name and distance
+      const { key } = keyMappings[activityType];
+      try {
+        const { distance, moving_time } = data[key];
+        totalDistance += distance;
+        return {
+          name: activityType,
+          pace: (distance * 3600) / (moving_time ? moving_time : 1),
+          distance
+        };
+      } catch (error) {
+        console.error(`Unable to get distance\n${error}`);
+        return {
+          name: activityType,
+          pace: 0,
+          distance: 0
+        };
+      }
+    })
+    .map(activity => {
+      // Calculate the percentages and bar charts for the 3 activities
+      const percent = (activity["distance"] / totalDistance) * 100;
+      const pacePH = formatDistance(activity["pace"]);
+      const pace = pacePH.substring(0, pacePH.length - 3); // strip unit
       return {
-        name: activityType,
-        pace: distance * 3600 / (moving_time ? moving_time : 1),
-        distance
+        ...activity,
+        distance: formatDistance(activity["distance"]),
+        pace: `${pace}/h`,
+        barChart: generateBarChart(percent, 19)
       };
-    } catch (error) {
-      console.error(`Unable to get distance\n${error}`);
-      return {
-        name: activityType,
-        pace: 0,
-        distance: 0
-      };
-    }
-  }).map(activity => {
-    // Calculate the percentages and bar charts for the 3 activities
-    const percent = (activity["distance"] / totalDistance) * 100;
-    const pacePH = formatDistance(activity["pace"]);
-    const pace = pacePH.substring(0, pacePH.length - 3);  // strip unit
-    return {
-      ...activity,
-      distance: formatDistance(activity["distance"]),
-      pace: `${pace}/h`,
-      barChart: generateBarChart(percent, 19)
-    };
-  }).map(activity => {
-    // Format the data to be displayed in the Gist
-    const { name, distance, pace, barChart } = activity;
-    return `${name.padEnd(10)} ${distance.padStart(
-      13
-    )} ${barChart} ${pace.padStart(7)}`;
-  });
+    })
+    .map(activity => {
+      // Format the data to be displayed in the Gist
+      const { name, distance, pace, barChart } = activity;
+      return `${name.padEnd(10)} ${distance.padStart(
+        13
+      )} ${barChart} ${pace.padStart(7)}`;
+    });
 
   // Last 4 weeks
   let monthDistance = 0;
   let monthTime = 0;
   let monthAchievements = 0;
-  for (let [key, value] of Object.entries(data)){
-    if (key.startsWith("recent_") && key.endsWith("_totals")){
+  for (let [key, value] of Object.entries(data)) {
+    if (key.startsWith("recent_") && key.endsWith("_totals")) {
       monthDistance += value["distance"];
       monthTime += value["moving_time"];
       monthAchievements += value["achievement_count"];
     }
   }
   lines.push(
-    `Last month ${
-      formatDistance(monthDistance).padStart(13)
-    } ${
-      (
-        monthAchievements
-        ? `${monthAchievements} achievement${monthAchievements > 1 ? "s" : ""}`
-        : ""
-      ).padStart(19)
-    } ${
-      `${(monthTime / 3600).toFixed(0)}`.padStart(3)
-    }:${
-      (monthTime / 60).toFixed(0) % 60
-    }h`
+    `Last month ${formatDistance(monthDistance).padStart(
+      13
+    )} ${(monthAchievements
+      ? `${monthAchievements} achievement${monthAchievements > 1 ? "s" : ""}`
+      : ""
+    ).padStart(19)} ${`${(monthTime / 3600).toFixed(0)}`.padStart(3)}:${(
+      monthTime / 60
+    ).toFixed(0) % 60}h`
   );
 
   try {
@@ -198,10 +194,9 @@ function generateBarChart(percent, size) {
   }
   const semi = frac % 8;
 
-  return [
-    syms.substring(8, 9).repeat(barsFull),
-    syms.substring(semi, semi + 1),
-  ].join("").padEnd(size, syms.substring(0, 1));
+  return [syms.substring(8, 9).repeat(barsFull), syms.substring(semi, semi + 1)]
+    .join("")
+    .padEnd(size, syms.substring(0, 1));
 }
 
 function formatDistance(distance) {
