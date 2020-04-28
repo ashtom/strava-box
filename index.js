@@ -7,7 +7,6 @@ const {
   GIST_ID: gistId,
   GITHUB_TOKEN: githubToken,
   STRAVA_ATHLETE_ID: stravaAthleteId,
-  STRAVA_ACCESS_TOKEN: stravaAccessToken,
   STRAVA_REFRESH_TOKEN: stravaRefreshToken,
   STRAVA_CLIENT_ID: stravaClientId,
   STRAVA_CLIENT_SECRET: stravaClientSecret,
@@ -31,7 +30,6 @@ async function main() {
 async function getStravaToken() {
   // default env vars
   let cache = {
-    // stravaAccessToken: stravaAccessToken,
     stravaRefreshToken: stravaRefreshToken
   };
   // read cache from disk
